@@ -1,0 +1,189 @@
+// prisma/schema.prisma
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id        String    @id @default(cuid())
+  name      String?
+  email     String    @unique
+  phone     String?
+  password  String?
+  role      String    @default("CUSTOMER") // "CUSTOMER" | "ADMIN"
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  addresses Address[]
+  orders    Order[]
+}
+
+model Address {
+  id         String   @id @default(cuid())
+  userId     String
+  fullName   String
+  phone      String
+  line1      String
+  line2      String?
+  city       String
+  area       String?
+  postalCode String?
+  isDefault  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Category {
+  id          String    @id @default(cuid())
+  name        String
+  slug        String    @unique
+  description String?
+  image       String?
+  icon        String?
+  sortOrder   Int       @default(0)
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+
+  products    Product[]
+}
+
+model Product {
+  id            String         @id @default(cuid())
+  name          String
+  slug          String         @unique
+  subtitle      String?
+  description   String
+  price         Float
+  originalPrice Float?
+  stock         Int            @default(50)
+  sku           String?        @unique
+  isFeatured    Boolean        @default(false)
+  isNew         Boolean        @default(false)
+  isBestseller  Boolean        @default(false)
+  rating        Float          @default(5.0)
+  reviewCount   Int            @default(0)
+  soldCount     Int            @default(0)
+  isActive      Boolean        @default(true)
+  categoryId    String
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  category      Category       @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  images        ProductImage[]
+  specs         ProductSpec[]
+  variants      ProductVariant[]
+  reviews       Review[]
+  orderItems    OrderItem[]
+}
+
+model ProductImage {
+  id        String   @id @default(cuid())
+  productId String
+  url       String
+  alt       String?
+  isPrimary Boolean  @default(false)
+  sortOrder Int      @default(0)
+
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+model ProductSpec {
+  id        String   @id @default(cuid())
+  productId String
+  label     String
+  value     String
+
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+model ProductVariant {
+  id        String   @id @default(cuid())
+  productId String
+  name      String
+  price     Float
+  stock     Int      @default(10)
+  sku       String?
+
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+model Order {
+  id            String      @id @default(cuid())
+  orderNumber   String      @unique
+  userId        String?
+  customerName  String
+  customerEmail String?
+  customerPhone String
+  addressLine   String
+  city          String
+  area          String?
+  postalCode    String?
+  paymentMethod String      @default("COD") // "COD" | "BKASH" | "NAGAD" | "CARD"
+  paymentStatus String      @default("PENDING") // "PENDING" | "PAID" | "FAILED"
+  orderStatus   String      @default("PENDING") // "PENDING" | "CONFIRMED" | "PROCESSING" | "SHIPPED" | "DELIVERED" | "CANCELLED"
+  subtotal      Float
+  discount      Float       @default(0)
+  shippingFee   Float       @default(60)
+  totalAmount   Float
+  notes         String?
+  trackingNumber String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  user          User?       @relation(fields: [userId], references: [id])
+  items         OrderItem[]
+}
+
+model OrderItem {
+  id          String   @id @default(cuid())
+  orderId     String
+  productId   String?
+  name        String
+  price       Float
+  quantity    Int      @default(1)
+  image       String?
+  variantName String?
+
+  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product     Product? @relation(fields: [productId], references: [id])
+}
+
+model Review {
+  id         String   @id @default(cuid())
+  productId  String
+  name       String
+  rating     Int      @default(5)
+  comment    String
+  isVerified Boolean  @default(true)
+  createdAt  DateTime @default(now())
+
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+model Coupon {
+  id             String    @id @default(cuid())
+  code           String    @unique
+  discountType   String    @default("PERCENT") // "PERCENT" | "FIXED"
+  discountValue  Float
+  minOrderAmount Float     @default(0)
+  maxDiscount    Float?
+  isActive       Boolean   @default(true)
+  expiresAt      DateTime?
+  createdAt      DateTime  @default(now())
+}
+
+model ShippingMethod {
+  id            String   @id @default(cuid())
+  name          String
+  description   String?
+  price         Float
+  freeAbove     Float?
+  estimatedDays String?
+  sortOrder     Int      @default(0)
+  isActive      Boolean  @default(true)
+}
